@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import PalabraModo1, PalabraModo2, Oracion
+from .models import PalabraModo1, PalabraModo2
 
 class PalabraModo1Serializer(serializers.ModelSerializer):
     class Meta:
@@ -9,9 +9,4 @@ class PalabraModo1Serializer(serializers.ModelSerializer):
 class PalabraModo2Serializer(serializers.ModelSerializer):
     class Meta:
         model = PalabraModo2
-        fields = '__all__'
-
-class OracionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Oracion
         fields = '__all__'

@@ -79,12 +79,19 @@ WSGI_APPLICATION = 'Dislexia.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql', # Especifica que usarás Postgres
-        'NAME': 'dislexia',                # El nombre que creaste en DBeaver
-        'USER': 'postgres',          # Por defecto suele ser 'postgres'
-        'PASSWORD': '123',               # La que configuraste al instalar Postgres
-        'HOST': 'localhost',                      # O 'localhost'
-        'PORT': '5432',                            # Puerto estándar de PostgreSQL
+        'ENGINE': 'django.db.backends.postgresql',  # Especifica que usarás Postgres
+        'NAME': 'postgres',  # El nombre que creaste en DBeaver
+        'USER': 'postgres.ppvncvebawpzwbjfhcdq',  # Por defecto suele ser 'postgres'
+        'PASSWORD': 'da!@zBS.U.8cbDb',  # La que configuraste al instalar Postgres
+        'HOST': 'aws-1-us-east-2.pooler.supabase.com',  # O 'localhost'
+        'PORT': '6543',
+
+        # 'ENGINE': 'django.db.backends.postgresql', # Especifica que usarás Postgres
+        # 'NAME': 'dislexia',                # El nombre que creaste en DBeaver
+        # 'USER': 'postgres',          # Por defecto suele ser 'postgres'
+        # 'PASSWORD': '123',               # La que configuraste al instalar Postgres
+        # 'HOST': 'localhost',                      # O 'localhost'
+        # 'PORT': '5432',
     }
 }
 

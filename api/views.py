@@ -6,14 +6,14 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from django.conf import settings
-from .models import PalabraModo1, PalabraModo2, Oracion
-from .serializers import PalabraModo1Serializer, PalabraModo2Serializer, OracionSerializer
+from .models import PalabraModo1, PalabraModo2
+from .serializers import PalabraModo1Serializer, PalabraModo2Serializer
 
 
 @api_view(['GET'])
 def juego_anagrama(request):
     # .order_by('?') desordena y [:10] toma las primeras 10 palabras únicas
-    palabras = PalabraModo1.objects.order_by('?')[:10]
+    palabras = PalabraModo1.objects.order_by('?')[:3]
 
     if palabras.exists():
         serializer = PalabraModo1Serializer(palabras, many=True)
@@ -54,13 +54,3 @@ def generar_oracion(request):
             'oracion': f"La {palabra} es muy bonita.",
             'error': 'Límite diario alcanzado'
         })
-
-# @api_view(['GET'])
-# def obtener_oracion(request, palabra_id):
-#     try:
-#         # Busca la oración ligada a la palabra base
-#         oracion = Oracion.objects.get(palabra_id=palabra_id)
-#         serializer = OracionSerializer(oracion)
-#         return Response(serializer.data)
-#     except Oracion.DoesNotExist:
-#         return Response({'error': 'No existe oración para esta palabra'}, status=404)

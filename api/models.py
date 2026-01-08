@@ -17,11 +17,3 @@ class PalabraModo1(PalabraBase):
 class PalabraModo2(PalabraBase):
     palabra_dividida_silabas = models.CharField(max_length=30)
     silabas = models.IntegerField()
-
-# 4. Tabla Oración con una sola clave foránea
-class Oracion(models.Model):
-    palabra = models.ForeignKey(PalabraBase, on_delete=models.CASCADE)
-    oracion_texto = models.CharField(max_length=100)
-
-    def __str__(self):
-        return self.oracion_texto

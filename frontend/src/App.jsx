@@ -10,7 +10,7 @@ import './App.css';
 
 function App() {
     // Estado para controlar qué pantalla ver (home por defecto)
-    const [pantallaActiva, setPantallaActiva] = useState('anagrama');
+    const [pantallaActiva, setPantallaActiva] = useState('home');
 
     // ESTADO GLOBAL: Vive aquí para que no se pierda
     const [listaPalabras, setListaPalabras] = useState([]);
