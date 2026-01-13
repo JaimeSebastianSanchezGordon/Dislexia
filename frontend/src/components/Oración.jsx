@@ -1,11 +1,13 @@
 import React, {useState, useEffect} from 'react';
 import axios from 'axios';
 import '../App.css';
+import PantallaReintentar from './PantallaReintentar';
 
 function Oracion({palabras, indice, alClickCasa, alClickJugarAnagrama}) {
     const [oracion, setOracion] = useState("");
     const [cargando, setCargando] = useState(false); // Estado para controlar la carga
     const [textoReconocido, setTextoReconocido] = useState("Presiona el micro y repite la oración...");
+    const [mostrarReintentar, setMostrarReintentar] = useState(false);
 
     const palabraActual = palabras[indice];
 
@@ -107,11 +109,21 @@ function Oracion({palabras, indice, alClickCasa, alClickJugarAnagrama}) {
         if (oracion === textoReconocido){
             controlarFinJuego();
         } else{
-            alert("¡Oh no! La oración no es igual. Intenta leerla de nuevo exactamente como aparece. 💪");
+            setMostrarReintentar(true);
         }
     };
 
+    const intentarDeNuevo = () => {
+        setMostrarReintentar(false);
+        setTextoReconocido("Presiona el micro y repite la oración...");
+    };
+
     if (!palabraActual) return <div className="screen">Cargando juego...</div>;
+
+    // Mostrar pantalla de reintentar
+    if (mostrarReintentar) {
+        return <PantallaReintentar alClickCasa={alClickCasa} alIntentarDeNuevo={intentarDeNuevo} />;
+    }
 
     return (
         <div id="anagram-game-screen" className="screen">

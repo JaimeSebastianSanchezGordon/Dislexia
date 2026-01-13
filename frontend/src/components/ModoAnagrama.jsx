@@ -8,6 +8,7 @@ function ModoAnagrama({palabras, indice, alClickCasa, alClickOracion}) {
     const [letrasSeleccionadas, setLetrasSeleccionadas] = useState([]);
     const [mostrarExito, setMostrarExito] = useState(false);
     const [mostrarError, setMostrarError] = useState(false);
+    const [intentos, setIntentos] = useState(0);
 
     useEffect(() => {
         if (palabras && palabras[indice]) {
@@ -20,6 +21,7 @@ function ModoAnagrama({palabras, indice, alClickCasa, alClickOracion}) {
         setLetrasSeleccionadas([]);
         setMostrarExito(false);
         setMostrarError(false);
+        setIntentos(0);
         let letras = palabraData.palabra_dividida_letras
             .split('-')
             .sort(() => Math.random() - 0.5);
@@ -43,6 +45,7 @@ function ModoAnagrama({palabras, indice, alClickCasa, alClickOracion}) {
         if (respuestaJugador === preguntaActual.nombre) {
             setMostrarExito(true);
         } else {
+            setIntentos(intentos + 1);
             setMostrarError(true);
         }
     };
@@ -54,7 +57,15 @@ function ModoAnagrama({palabras, indice, alClickCasa, alClickOracion}) {
 
     const continuarDespuesDeError = () => {
         setMostrarError(false);
-        alClickOracion();
+
+        // Si ya pasaron 3 intentos, ir a la oración
+        if (intentos >= 3) {
+            alClickOracion();
+        } else {
+            // Resetear las letras para reintentar
+            setLetrasSeleccionadas([]);
+            prepararRonda(palabras[indice]);
+        }
     };
 
     // Función auxiliar para activar letras con Enter o Espacio
@@ -102,6 +113,7 @@ function ModoAnagrama({palabras, indice, alClickCasa, alClickOracion}) {
                 alContinuar={continuarDespuesDeError}
                 respuestaCorrecta={palabraActual.nombre}
                 tipoJuego="anagrama"
+                intentos={intentos}
             />
         );
     }

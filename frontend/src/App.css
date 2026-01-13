@@ -702,6 +702,54 @@ body {
     font-weight: 600;
 }
 
+/* Pantalla de reintentar */
+#retry-screen {
+    background: linear-gradient(to bottom right, #fef3c7, #fed7aa, #fde68a);
+}
+
+.retry-icon {
+    font-size: 5rem;
+}
+
+.retry-title {
+    color: #d97706;
+}
+
+.retry-card {
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    padding: 2rem;
+    border-radius: 1.5rem;
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+    max-width: 700px;
+    width: 100%;
+}
+
+.retry-text {
+    font-size: 1.5rem;
+    color: #334155;
+    text-align: center;
+    line-height: 1.6;
+}
+
+.btn-retry {
+    background: linear-gradient(to right, #fbbf24, #f59e0b);
+    color: white;
+    padding: 1.5rem 3rem;
+    font-size: 1.5rem;
+    border: none;
+    border-radius: 1rem;
+    cursor: pointer;
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    font-weight: 600;
+}
+
+.btn-retry:hover {
+    background: linear-gradient(to right, #f59e0b, #d97706);
+    box-shadow: 0 20px 25px rgba(0, 0, 0, 0.15);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .title-main {

@@ -13,7 +13,7 @@ from .serializers import PalabraModo1Serializer, PalabraModo2Serializer
 @api_view(['GET'])
 def juego_anagrama(request):
     # .order_by('?') desordena y [:10] toma las primeras 10 palabras únicas
-    palabras = PalabraModo1.objects.order_by('?')[:3]
+    palabras = PalabraModo1.objects.order_by('?')[:2]
 
     if palabras.exists():
         serializer = PalabraModo1Serializer(palabras, many=True)
@@ -23,7 +23,8 @@ def juego_anagrama(request):
 
 @api_view(['GET'])
 def juego_silabas(request):
-    palabras = PalabraModo2.objects.all()
+    #palabras = PalabraModo2.objects.all()
+    palabras = PalabraModo2.objects.order_by('?')[:1]
     serializer = PalabraModo2Serializer(palabras, many=True)
     return Response(serializer.data)
 
