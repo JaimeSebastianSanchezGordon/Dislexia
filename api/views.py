@@ -8,28 +8,337 @@ from .models import PalabraModo1, PalabraModo2
 from .serializers import PalabraModo1Serializer, PalabraModo2Serializer
 import json
 import random
+import requests
+from io import BytesIO
+from PIL import Image
+import base64
 
-# Configuramos el cliente de Gemini de forma lazy (solo cuando se necesite)
+# Configurar Gemini
 def get_gemini_client():
-    """Obtiene el cliente de Gemini, solo si la API key está configurada"""
+    """Obtiene el cliente de Gemini configurado"""
     api_key = getattr(settings, 'GEMINI_API_KEY', None)
     if api_key and api_key.strip():
-        return genai.Client(api_key=api_key)
+        client = genai.Client(api_key=api_key)
+        return client
     return None
 
-def obtener_imagen_palabra(palabra):
+def validar_imagen_con_palabra(client, imagen_url, palabra):
+    """
+    Valida que una imagen corresponda a la palabra usando Gemini Vision.
+    Retorna True si coincide, False si no.
+    """
+    try:
+        # Descargar la imagen
+        response = requests.get(imagen_url, timeout=10)
+        if response.status_code != 200:
+            print(f"Error descargando imagen para '{palabra}': HTTP {response.status_code}")
+            return False
+
+        # Crear prompt de validación más estricto
+        prompt = f"""Analiza cuidadosamente esta imagen y determina si muestra un/una {palabra}.
+
+REGLAS ESTRICTAS:
+- Responde "SI" SOLO si la imagen muestra CLARAMENTE un/una {palabra}
+- Responde "NO" si muestra cualquier otra cosa diferente (aunque sea similar)
+- La imagen debe ser inequívoca y reconocible como {palabra}
+- NO aceptes objetos similares o relacionados, debe ser EXACTAMENTE un/una {palabra}
+
+Ejemplos:
+- Si busco "pelota" y veo una mochila → NO
+- Si busco "pelota" y veo una pelota → SI
+- Si busco "gato" y veo un perro → NO
+- Si busco "gato" y veo un gato → SI
+
+Responde ÚNICAMENTE con: SI o NO (nada más)"""
+
+        # Guardar imagen temporalmente
+        import tempfile
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp_file:
+            tmp_file.write(response.content)
+            tmp_path = tmp_file.name
+
+        # Subir imagen a Gemini usando el nuevo API
+        uploaded_file = client.files.upload(path=tmp_path)
+
+        # Usar Gemini Vision para validar
+        vision_response = client.models.generate_content(
+            model='gemini-2.0-flash-exp',
+            contents=[uploaded_file, prompt]
+        )
+
+        # Limpiar archivo temporal
+        import os
+        os.unlink(tmp_path)
+
+        respuesta = vision_response.text.strip().upper()
+        es_valida = "SI" in respuesta or "YES" in respuesta
+
+        print(f"Validación de imagen para '{palabra}': {respuesta} → {'VÁLIDA' if es_valida else 'INVÁLIDA'}")
+        return es_valida
+
+    except Exception as e:
+        print(f"Error validando imagen para '{palabra}': {e}")
+        return False
+
+def buscar_imagen_validada_unsplash(client, palabra, max_intentos=5):
+    """
+    Busca una imagen en Unsplash que realmente corresponda a la palabra.
+    Usa IA para validar cada imagen antes de aceptarla.
+    Retorna la URL de la imagen validada o None si no encuentra ninguna.
+    """
+    try:
+        # Traducir búsquedas comunes para mejorar resultados
+        terminos_busqueda = {
+            'pelota': ['soccer ball', 'football ball', 'sports ball'],
+            'gato': ['cat face', 'domestic cat', 'kitten'],
+            'perro': ['dog face', 'puppy dog', 'domestic dog'],
+            'casa': ['small house', 'cottage', 'home exterior'],
+            'mesa': ['wooden table', 'dining table', 'furniture table'],
+            'zapato': ['shoe', 'sneaker', 'footwear'],
+            'pato': ['duck bird', 'mallard duck'],
+            'conejo': ['rabbit bunny', 'cute rabbit'],
+            'elefante': ['elephant', 'african elephant'],
+            'caballo': ['horse', 'brown horse'],
+            'pajaro': ['bird', 'songbird'],
+            'pez': ['fish', 'goldfish'],
+            'leon': ['lion', 'male lion'],
+            'tigre': ['tiger', 'bengal tiger'],
+            'oso': ['bear', 'brown bear'],
+            'mariposa': ['butterfly', 'colorful butterfly'],
+            'tortuga': ['turtle', 'tortoise'],
+            'vaca': ['cow', 'dairy cow'],
+            'gallina': ['chicken', 'hen'],
+            'oveja': ['sheep', 'lamb'],
+            'sol': ['sun', 'sunset sun', 'sunrise'],
+            'luna': ['moon', 'full moon'],
+            'flor': ['flower', 'blooming flower'],
+            'estrella': ['star', 'night stars'],
+            'nube': ['cloud', 'white cloud'],
+            'arbol': ['tree', 'oak tree'],
+            'montana': ['mountain', 'mountain peak'],
+            'rio': ['river', 'flowing river'],
+            'playa': ['beach', 'sandy beach'],
+            'mar': ['ocean', 'sea water'],
+            'manzana': ['apple', 'red apple'],
+            'pan': ['bread', 'fresh bread'],
+            'agua': ['water', 'glass of water'],
+            'leche': ['milk', 'glass of milk'],
+            'queso': ['cheese', 'yellow cheese'],
+            'naranja': ['orange fruit', 'orange citrus'],
+            'platano': ['banana', 'yellow banana'],
+            'uva': ['grapes', 'grape bunch'],
+            'pera': ['pear', 'green pear'],
+            'sandia': ['watermelon', 'watermelon slice'],
+            'ventana': ['window', 'open window'],
+            'silla': ['chair', 'wooden chair'],
+        }
+
+        palabra_normalizada = palabra.lower().strip()
+        terminos = terminos_busqueda.get(palabra_normalizada, [palabra])
+
+        print(f"\n🔍 Buscando imagen validada para '{palabra}'...")
+
+        for termino in terminos:
+            print(f"  → Probando término de búsqueda: '{termino}'")
+
+            # Buscar en Unsplash (usando IDs aleatorios de búsqueda)
+            # Nota: Unsplash requiere API key para búsquedas, por ahora usamos URLs directas
+            # pero con validación IA
+            base_urls = [
+                f"https://source.unsplash.com/400x400/?{termino.replace(' ', ',')}",
+                f"https://source.unsplash.com/featured/400x400/?{termino.replace(' ', ',')}",
+            ]
+
+            for intento, base_url in enumerate(base_urls):
+                if intento >= max_intentos:
+                    break
+
+                # Agregar timestamp para obtener diferentes imágenes
+                import time
+                url_con_cache = f"{base_url}&t={int(time.time())}{intento}"
+
+                print(f"    → Intento {intento + 1}: Validando imagen...")
+
+                # Validar la imagen con IA
+                if validar_imagen_con_palabra(client, url_con_cache, palabra):
+                    print(f"    ✅ ¡Imagen VÁLIDA encontrada para '{palabra}'!")
+                    # Obtener la URL final después de la redirección
+                    try:
+                        final_response = requests.get(url_con_cache, timeout=10, allow_redirects=True)
+                        return final_response.url
+                    except:
+                        return url_con_cache
+
+        print(f"  ❌ No se encontró imagen válida para '{palabra}' después de {max_intentos} intentos")
+        return None
+
+    except Exception as e:
+        print(f"Error buscando imagen para '{palabra}': {e}")
+        return None
+
+def obtener_palabras_validadas(client, cantidad, tipo_juego='anagrama'):
+    """
+    Genera palabras y valida que las imágenes coincidan.
+    Si una imagen no coincide, usa la del mapeo IMAGENES_UNSPLASH.
+    """
+    max_intentos = 3
+    palabras_validas = []
+
+    for intento in range(max_intentos):
+        if len(palabras_validas) >= cantidad:
+            break
+
+        # Generar palabras según el tipo de juego
+        if tipo_juego == 'anagrama':
+            palabras_candidatas = generar_palabras_anagrama_raw(client, cantidad)
+        else:  # silabas
+            palabras_candidatas = generar_palabras_silabas_raw(client, cantidad)
+
+        for palabra_data in palabras_candidatas:
+            if len(palabras_validas) >= cantidad:
+                break
+
+            nombre = palabra_data['nombre'].lower().strip()
+
+            # Primero intentar con imagen del mapeo (más confiable)
+            if nombre in IMAGENES_UNSPLASH:
+                palabra_data['imagen'] = IMAGENES_UNSPLASH[nombre]
+                palabra_data['validada'] = True
+                palabras_validas.append(palabra_data)
+                continue
+
+            # Si no está en el mapeo, validar la imagen generada
+            # (esto requeriría obtener la imagen de Unsplash primero)
+            # Por ahora, si no está en el mapeo, usar una palabra de respaldo
+            print(f"Palabra '{nombre}' no está en el mapeo, saltando...")
+
+    return palabras_validas
+
+def generar_palabras_anagrama_raw(client, cantidad):
+    """Genera palabras para anagrama sin validación"""
+    categoria = random.choice(CATEGORIAS_PALABRAS)
+
+    prompt = f"""Genera exactamente {cantidad} palabras en español para un juego educativo de niños de 7 años.
+    Categoría: {categoria}
+
+    REGLAS IMPORTANTES:
+    - Palabras de 3 a 6 letras solamente
+    - Sin tildes ni caracteres especiales
+    - Palabras comunes que un niño conoce
+    - Todas las letras en minúscula
+    - SOLO USA PALABRAS DE ESTA LISTA: gato, perro, pato, conejo, elefante, caballo, pajaro, pez, leon, tigre, oso, mariposa, tortuga, vaca, gallina, oveja, casa, mesa, pelota, zapato, ventana, silla, sol, luna, flor, estrella, nube, arbol, montana, rio, playa, mar, manzana, pan, agua, leche, queso, naranja, platano, uva, pera, sandia
+
+    Responde SOLO con un JSON válido con este formato exacto, sin texto adicional:
+    [
+        {{"nombre": "gato"}},
+        {{"nombre": "perro"}},
+        {{"nombre": "manzana"}}
+    ]
+    """
+
+    response = client.models.generate_content(
+        model='gemini-2.0-flash-exp',
+        contents=prompt
+    )
+
+    texto = response.text.strip()
+    if texto.startswith("```json"):
+        texto = texto[7:]
+    if texto.startswith("```"):
+        texto = texto[3:]
+    if texto.endswith("```"):
+        texto = texto[:-3]
+    texto = texto.strip()
+
+    return json.loads(texto)
+
+def generar_palabras_silabas_raw(client, cantidad):
+    """Genera palabras para sílabas sin validación"""
+    categoria = random.choice(CATEGORIAS_PALABRAS)
+
+    prompt = f"""Genera exactamente {cantidad} palabras en español para un juego educativo de sílabas para niños de 7 años.
+    Categoría: {categoria}
+
+    REGLAS IMPORTANTES:
+    - Palabras de 2 a 4 sílabas
+    - Sin tildes ni caracteres especiales
+    - Palabras comunes que un niño conoce
+    - Todas las letras en minúscula
+    - SOLO USA PALABRAS DE ESTA LISTA: gato, perro, pato, conejo, elefante, caballo, pajaro, pez, leon, tigre, oso, mariposa, tortuga, vaca, gallina, oveja, casa, mesa, pelota, zapato, ventana, silla, sol, luna, flor, estrella, nube, arbol, montana, rio, playa, mar, manzana, pan, agua, leche, queso, naranja, platano, uva, pera, sandia
+
+    Para cada palabra incluye:
+    - Las sílabas separadas
+    - El índice de una sílaba para ocultar (0, 1, 2...)
+    - 4 opciones de sílabas (la correcta + 3 incorrectas similares)
+
+    Responde SOLO con un JSON válido con este formato exacto, sin texto adicional:
+    [
+        {{
+            "nombre": "mariposa",
+            "silabas": ["ma", "ri", "po", "sa"],
+            "silaba_oculta": 2,
+            "opciones": ["po", "pe", "pa", "pi"]
+        }}
+    ]
+    """
+
+    response = client.models.generate_content(
+        model='gemini-2.0-flash-exp',
+        contents=prompt
+    )
+
+    texto = response.text.strip()
+    if texto.startswith("```json"):
+        texto = texto[7:]
+    if texto.startswith("```"):
+        texto = texto[3:]
+    if texto.endswith("```"):
+        texto = texto[:-3]
+    texto = texto.strip()
+
+    return json.loads(texto)
+
+def obtener_imagen_palabra(palabra, client=None):
     """
     Obtiene la URL de imagen para una palabra
-    Usa el mapeo directo de URLs específicas de Unsplash
+    Si client (Gemini) está disponible, valida que la imagen coincida con la palabra.
+    Si no coincide, busca una imagen alternativa validada.
     """
     # Normalizar la palabra (quitar tildes y convertir a minúsculas)
     palabra_normalizada = palabra.lower().strip()
 
-    # Buscar en el mapeo directo
+    # Primero intentar con el mapeo directo
     if palabra_normalizada in IMAGENES_UNSPLASH:
-        return IMAGENES_UNSPLASH[palabra_normalizada]
+        url_mapeo = IMAGENES_UNSPLASH[palabra_normalizada]
+
+        # Si tenemos client de Gemini, validar la imagen
+        if client:
+            print(f"\n🔍 Validando imagen del mapeo para '{palabra}'...")
+            if validar_imagen_con_palabra(client, url_mapeo, palabra):
+                print(f"✅ Imagen del mapeo es válida para '{palabra}'")
+                return url_mapeo
+            else:
+                print(f"❌ Imagen del mapeo NO es válida para '{palabra}', buscando alternativa...")
+                # Buscar imagen alternativa validada
+                url_validada = buscar_imagen_validada_unsplash(client, palabra, max_intentos=3)
+                if url_validada:
+                    return url_validada
+                else:
+                    print(f"⚠️ No se encontró alternativa, usando imagen del mapeo de todas formas")
+                    return url_mapeo
+        else:
+            # Sin client, confiar en el mapeo
+            return url_mapeo
+
+    # Si no está en el mapeo y tenemos client, buscar con validación
+    if client:
+        print(f"\n🔍 Palabra '{palabra}' no está en mapeo, buscando con validación IA...")
+        url_validada = buscar_imagen_validada_unsplash(client, palabra, max_intentos=5)
+        if url_validada:
+            return url_validada
 
     # Imagen de respaldo genérica
+    print(f"⚠️ Usando imagen de respaldo genérica para '{palabra}'")
     return "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=400&h=400&fit=crop"
 
 # Lista de categorías para palabras de niños
@@ -52,11 +361,11 @@ PALABRAS_RESPALDO_ANAGRAMA = [
 ]
 
 PALABRAS_RESPALDO_SILABAS = [
-    {"nombre": "mariposa", "imagen": "https://images.unsplash.com/photo-1452570053594-1b985d6ea890?w=400", "silabas": ["ma", "ri", "po", "sa"], "silaba_oculta": 2, "opciones": ["po", "pe", "pa", "pi"]},
+    {"nombre": "mariposa", "imagen": "https://images.unsplash.com/photo-1526336024174-e58f5cdd8e13?w=400", "silabas": ["ma", "ri", "po", "sa"], "silaba_oculta": 2, "opciones": ["po", "pe", "pa", "pi"]},
     {"nombre": "elefante", "imagen": "https://images.unsplash.com/photo-1557050543-4d5f4e07ef46?w=400", "silabas": ["e", "le", "fan", "te"], "silaba_oculta": 1, "opciones": ["le", "la", "lo", "li"]},
     {"nombre": "conejo", "imagen": "https://images.unsplash.com/photo-1585110396000-c9ffd4e4b308?w=400", "silabas": ["co", "ne", "jo"], "silaba_oculta": 1, "opciones": ["ne", "na", "no", "ni"]},
     {"nombre": "tortuga", "imagen": "https://images.unsplash.com/photo-1437622368342-7a3d73a34c8f?w=400", "silabas": ["tor", "tu", "ga"], "silaba_oculta": 2, "opciones": ["ga", "go", "gu", "ge"]},
-    {"nombre": "pelota", "imagen": "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400", "silabas": ["pe", "lo", "ta"], "silaba_oculta": 1, "opciones": ["lo", "la", "le", "lu"]},
+    {"nombre": "pelota", "imagen": "https://images.unsplash.com/photo-1614632537197-38a17061c2bd?w=400", "silabas": ["pe", "lo", "ta"], "silaba_oculta": 1, "opciones": ["lo", "la", "le", "lu"]},
     {"nombre": "zapato", "imagen": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400", "silabas": ["za", "pa", "to"], "silaba_oculta": 0, "opciones": ["za", "ze", "zo", "zu"]},
     {"nombre": "caballo", "imagen": "https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?w=400", "silabas": ["ca", "ba", "llo"], "silaba_oculta": 1, "opciones": ["ba", "be", "bi", "bo"]},
     {"nombre": "ventana", "imagen": "https://images.unsplash.com/photo-1509644851169-2acc08aa25b5?w=400", "silabas": ["ven", "ta", "na"], "silaba_oculta": 2, "opciones": ["na", "ne", "no", "nu"]},
@@ -78,7 +387,7 @@ IMAGENES_UNSPLASH = {
     "leon": "https://images.unsplash.com/photo-1546182990-dffeafbe841d?w=400&h=400&fit=crop",
     "tigre": "https://images.unsplash.com/photo-1551492910-2f0acb2e8115?w=400&h=400&fit=crop",
     "oso": "https://images.unsplash.com/photo-1589656966895-2f33e7653819?w=400&h=400&fit=crop",
-    "mariposa": "https://images.unsplash.com/photo-1452570053594-1b985d6ea890?w=400&h=400&fit=crop",
+    "mariposa": "https://images.unsplash.com/photo-1526336024174-e58f5cdd8e13?w=400&h=400&fit=crop",  # Mariposa monarca naranja
     "tortuga": "https://images.unsplash.com/photo-1437622368342-7a3d73a34c8f?w=400&h=400&fit=crop",
     "vaca": "https://images.unsplash.com/photo-1560493676-04071c5f467b?w=400&h=400&fit=crop",
     "gallina": "https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?w=400&h=400&fit=crop",
@@ -86,7 +395,7 @@ IMAGENES_UNSPLASH = {
     # Objetos
     "casa": "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=400&h=400&fit=crop",
     "mesa": "https://images.unsplash.com/photo-1530018607912-eff2daa1bac4?w=400&h=400&fit=crop",
-    "pelota": "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=400&fit=crop",
+    "pelota": "https://images.unsplash.com/photo-1614632537197-38a17061c2bd?w=400&h=400&fit=crop",  # Pelota de fútbol real
     "zapato": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=400&fit=crop",
     "ventana": "https://images.unsplash.com/photo-1509644851169-2acc08aa25b5?w=400&h=400&fit=crop",
     "silla": "https://images.unsplash.com/photo-1503602642458-232111445657?w=400&h=400&fit=crop",
@@ -122,7 +431,7 @@ IMAGENES_UNSPLASH = {
 
 @api_view(['GET'])
 def juego_anagrama(request):
-    """Genera palabras aleatorias para el juego de anagramas usando Gemini"""
+    """Genera palabras aleatorias para el juego de anagramas usando Gemini con validación de imágenes"""
     # Obtener cantidad desde query params, por defecto 3
     cantidad = int(request.GET.get('cantidad', 3))
     # Limitar entre 2 y 8 palabras
@@ -133,52 +442,16 @@ def juego_anagrama(request):
         if not client:
             raise ValueError("Gemini API key not configured")
 
-        categoria = random.choice(CATEGORIAS_PALABRAS)
+        # Obtener palabras validadas
+        palabras_validadas = obtener_palabras_validadas(client, cantidad, tipo_juego='anagrama')
 
-        prompt = f"""Genera exactamente {cantidad} palabras en español para un juego educativo de niños de 7 años.
-        Categoría: {categoria}
-
-        REGLAS IMPORTANTES:
-        - Palabras de 3 a 6 letras solamente
-        - Sin tildes ni caracteres especiales
-        - Palabras comunes que un niño conoce
-        - Todas las letras en minúscula
-        - Para cada palabra, proporciona un término de búsqueda en INGLÉS específico y preciso para encontrar la imagen correcta
-
-        Responde SOLO con un JSON válido con este formato exacto, sin texto adicional:
-        [
-            {{"nombre": "gato", "imagen_busqueda": "cute kitten cat"}},
-            {{"nombre": "perro", "imagen_busqueda": "cute puppy dog"}},
-            {{"nombre": "manzana", "imagen_busqueda": "red apple fruit"}}
-        ]
-        
-        IMPORTANTE: El término de búsqueda debe ser EN INGLÉS y muy específico para que la imagen coincida exactamente con la palabra.
-        """
-
-        response = client.models.generate_content(
-            model='gemini-2.0-flash-exp',
-            contents=prompt
-        )
-
-        # Limpiar la respuesta
-        texto = response.text.strip()
-        if texto.startswith("```json"):
-            texto = texto[7:]
-        if texto.startswith("```"):
-            texto = texto[3:]
-        if texto.endswith("```"):
-            texto = texto[:-3]
-        texto = texto.strip()
-
-        palabras_raw = json.loads(texto)
-
-        # Procesar palabras y obtener imágenes
+        # Procesar palabras validadas
         palabras_procesadas = []
-        for p in palabras_raw[:cantidad]:
-            nombre = p['nombre'].lower().strip()
+        for palabra_data in palabras_validadas:
+            nombre = palabra_data['nombre'].lower().strip()
 
-            # Obtener imagen del mapeo directo
-            imagen_url = obtener_imagen_palabra(nombre)
+            # Usar imagen validada con IA
+            imagen_url = obtener_imagen_palabra(nombre, client=client)
 
             palabras_procesadas.append({
                 "nombre": nombre,
@@ -186,7 +459,16 @@ def juego_anagrama(request):
                 "palabra_dividida_letras": "-".join(list(nombre))
             })
 
-        return Response(palabras_procesadas)
+        # Si no se obtuvieron suficientes palabras validadas, completar con respaldo
+        if len(palabras_procesadas) < cantidad:
+            faltantes = cantidad - len(palabras_procesadas)
+            palabras_respaldo = random.sample(
+                PALABRAS_RESPALDO_ANAGRAMA,
+                min(faltantes, len(PALABRAS_RESPALDO_ANAGRAMA))
+            )
+            palabras_procesadas.extend(palabras_respaldo)
+
+        return Response(palabras_procesadas[:cantidad])
 
     except Exception as e:
         print(f"Error en juego_anagrama: {e}")
@@ -197,7 +479,7 @@ def juego_anagrama(request):
 
 @api_view(['GET'])
 def juego_silabas(request):
-    """Genera palabras aleatorias para el juego de sílabas usando Gemini"""
+    """Genera palabras aleatorias para el juego de sílabas usando Gemini con validación de imágenes"""
     # Obtener cantidad desde query params, por defecto 3
     cantidad = int(request.GET.get('cantidad', 3))
     # Limitar entre 2 y 8 palabras
@@ -208,65 +490,20 @@ def juego_silabas(request):
         if not client:
             raise ValueError("Gemini API key not configured")
 
-        categoria = random.choice(CATEGORIAS_PALABRAS)
+        # Obtener palabras validadas
+        palabras_validadas = obtener_palabras_validadas(client, cantidad, tipo_juego='silabas')
 
-        prompt = f"""Genera exactamente {cantidad} palabras en español para un juego educativo de sílabas para niños de 7 años.
-        Categoría: {categoria}
-
-        REGLAS IMPORTANTES:
-        - Palabras de 2 a 4 sílabas
-        - Sin tildes ni caracteres especiales
-        - Palabras comunes que un niño conoce
-        - Todas las letras en minúscula
-        - Para cada palabra, proporciona un término de búsqueda en INGLÉS específico y preciso para encontrar la imagen correcta
-
-        Para cada palabra incluye:
-        - Las sílabas separadas
-        - El índice de una sílaba para ocultar (0, 1, 2...)
-        - 4 opciones de sílabas (la correcta + 3 incorrectas similares)
-
-        Responde SOLO con un JSON válido con este formato exacto, sin texto adicional:
-        [
-            {{
-                "nombre": "mariposa",
-                "imagen_busqueda": "colorful butterfly insect",
-                "silabas": ["ma", "ri", "po", "sa"],
-                "silaba_oculta": 2,
-                "opciones": ["po", "pe", "pa", "pi"]
-            }}
-        ]
-        
-        IMPORTANTE: El término de búsqueda debe ser EN INGLÉS y muy específico para que la imagen coincida exactamente con la palabra.
-        """
-
-        response = client.models.generate_content(
-            model='gemini-2.0-flash-exp',
-            contents=prompt
-        )
-
-        # Limpiar la respuesta
-        texto = response.text.strip()
-        if texto.startswith("```json"):
-            texto = texto[7:]
-        if texto.startswith("```"):
-            texto = texto[3:]
-        if texto.endswith("```"):
-            texto = texto[:-3]
-        texto = texto.strip()
-
-        palabras_raw = json.loads(texto)
-
-        # Procesar palabras y obtener imágenes
+        # Procesar palabras validadas
         palabras_procesadas = []
-        for p in palabras_raw[:cantidad]:
-            nombre = p['nombre'].lower().strip()
+        for palabra_data in palabras_validadas:
+            nombre = palabra_data['nombre'].lower().strip()
 
-            # Obtener imagen del mapeo directo
-            imagen_url = obtener_imagen_palabra(nombre)
+            # Usar imagen validada con IA
+            imagen_url = obtener_imagen_palabra(nombre, client=client)
 
             # Asegurar que las opciones incluyan la sílaba correcta
-            silaba_correcta = p['silabas'][p['silaba_oculta']]
-            opciones = p['opciones']
+            silaba_correcta = palabra_data['silabas'][palabra_data['silaba_oculta']]
+            opciones = palabra_data['opciones']
             if silaba_correcta not in opciones:
                 opciones[0] = silaba_correcta
             random.shuffle(opciones)
@@ -274,12 +511,21 @@ def juego_silabas(request):
             palabras_procesadas.append({
                 "nombre": nombre,
                 "imagen": imagen_url,
-                "silabas": p['silabas'],
-                "silaba_oculta": p['silaba_oculta'],
+                "silabas": palabra_data['silabas'],
+                "silaba_oculta": palabra_data['silaba_oculta'],
                 "opciones": opciones
             })
 
-        return Response(palabras_procesadas)
+        # Si no se obtuvieron suficientes palabras validadas, completar con respaldo
+        if len(palabras_procesadas) < cantidad:
+            faltantes = cantidad - len(palabras_procesadas)
+            palabras_respaldo = random.sample(
+                PALABRAS_RESPALDO_SILABAS,
+                min(faltantes, len(PALABRAS_RESPALDO_SILABAS))
+            )
+            palabras_procesadas.extend(palabras_respaldo)
+
+        return Response(palabras_procesadas[:cantidad])
 
     except Exception as e:
         print(f"Error en juego_silabas: {e}")

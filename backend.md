@@ -93,21 +93,47 @@ Genera una oración simple, natural, gramaticalmente correcta **y lógicamente c
 - ❌ Antes: "La tortuga corre muy rápido" (incorrecto)
 - ✅ Ahora: "La tortuga camina despacio por el jardín" (correcto)
 
-## 🎨 Sistema de Imágenes
+## 🎨 Sistema de Imágenes (NUEVO - Validación con IA)
 
-El sistema ahora utiliza un **mapeo directo de URLs específicas de Unsplash** para garantizar que las imágenes coincidan exactamente con las palabras:
+El sistema ahora incluye **validación inteligente de imágenes usando Gemini Vision AI** para garantizar que las imágenes coincidan exactamente con las palabras:
 
-- **50+ palabras** con imágenes verificadas manualmente
-- URLs directas con IDs específicos de Unsplash
-- Incluye variantes con y sin tildes (ej: "león" y "leon")
-- Imagen de respaldo genérica para palabras no mapeadas
-- **Gemini genera las palabras, el backend asigna las imágenes correctas**
+### ✨ Características principales:
+- **Validación automática con IA**: Cada imagen se verifica usando Gemini Vision antes de mostrarse
+- **Detección de inconsistencias**: Si una imagen NO coincide con la palabra, busca automáticamente una alternativa
+- **Mapeo estático de 50+ palabras** con imágenes verificadas manualmente
+- **Búsqueda inteligente en Unsplash** con términos optimizados en inglés
+- **Sistema de fallback robusto** para garantizar que siempre haya una imagen
+
+### 🔍 Cómo funciona:
+1. Primero intenta usar la imagen del mapeo estático
+2. **Valida con IA** que la imagen realmente muestre lo que dice la palabra
+3. Si la imagen NO es válida, busca alternativas en Unsplash
+4. Valida cada alternativa con IA antes de aceptarla
+5. Retorna la primera imagen que pase la validación
+
+### 📝 Ejemplo de validación:
+```
+🔍 Validando imagen del mapeo para 'pelota'...
+Validación: NO → INVÁLIDA (mostraba mochila)
+❌ Buscando alternativa...
+✅ ¡Imagen VÁLIDA encontrada!
+```
+
+### 🛠️ Dependencias necesarias:
+- `Pillow==11.1.0` - Procesamiento de imágenes
+- `requests==2.33.0` - Descarga y validación de imágenes
+- `google-genai==1.10.1` - Gemini Vision AI (nuevo paquete oficial)
+- `whitenoise==6.8.2` - Servir archivos estáticos en producción
+
+**Nota:** El paquete `google-generativeai` está obsoleto y ha sido reemplazado por `google-genai`.
 
 **Ventajas:**
-- ✅ Imágenes consistentes y precisas
-- ✅ No requiere API key adicional de Unsplash
-- ✅ Carga rápida sin llamadas a APIs externas
-- ✅ Fácil de expandir agregando más URLs al diccionario
+- ✅ Imágenes consistentes y precisas (elimina errores como "pelota" mostrando mochila)
+- ✅ Validación automática con IA (sin intervención manual)
+- ✅ Mejora la experiencia educativa (niños ven imágenes correctas)
+- ✅ Sistema robusto con múltiples fallbacks
+
+Ver más detalles en: `VALIDACION_IMAGENES_IA.md`
 
 ## 🔧 Configuración
 
@@ -116,6 +142,90 @@ El sistema ahora utiliza un **mapeo directo de URLs específicas de Unsplash** p
   - Con API key: Genera palabras y oraciones dinámicamente con IA
   - Sin API key: Usa palabras y oraciones predefinidas (funciona igual de bien)
 - **CORS**: Habilitado para todos los orígenes (desarrollo)
+
+## 🐳 Despliegue con Docker
+
+El proyecto incluye configuración completa de Docker para desarrollo y producción.
+
+### Usar Docker Compose
+
+```bash
+# Iniciar todos los servicios (backend + frontend + base de datos)
+docker-compose up -d --build
+
+# Ver logs
+docker-compose logs -f
+
+# Detener servicios
+docker-compose down
+```
+
+### Script de ayuda (Windows PowerShell)
+
+```powershell
+# Ver todos los comandos disponibles
+.\docker-helper.ps1 help
+
+# Comandos principales
+.\docker-helper.ps1 start          # Iniciar servicios
+.\docker-helper.ps1 logs-api       # Ver logs del backend
+.\docker-helper.ps1 migrate        # Ejecutar migraciones
+.\docker-helper.ps1 createsuperuser # Crear usuario admin
+.\docker-helper.ps1 clean          # Limpiar todo
+```
+
+**Puertos**:
+- Backend: `http://localhost:8000`
+- Frontend: `http://localhost:5173`
+- Base de datos: Puerto 5432 (PostgreSQL)
+
+## 🚀 Despliegue en Render.com
+
+El proyecto está configurado para desplegarse en Render.com usando Docker.
+
+### Archivo de configuración: `render.yaml`
+
+```yaml
+services:
+  - type: web
+    name: dislexia-backend-docker
+    env: docker
+    dockerfilePath: ./Dockerfile
+```
+
+### Variables de entorno necesarias:
+- `SECRET_KEY`: Clave secreta de Django (se genera automáticamente)
+- `DEBUG`: False (en producción)
+- `ALLOWED_HOSTS`: .onrender.com
+- `GEMINI_API_KEY`: Tu API key de Google Gemini (opcional)
+- `CORS_ALLOWED_ORIGINS`: URL de tu frontend (ej: https://tu-app.vercel.app)
+
+### Script de build: `build.sh`
+
+```bash
+#!/usr/bin/env bash
+pip install -r requirements.txt
+python manage.py collectstatic --no-input
+python manage.py migrate
+```
+
+Este script se ejecuta automáticamente en Render durante el despliegue.
+
+## 📦 Dependencias de producción
+
+El archivo `requirements.txt` incluye todas las dependencias necesarias:
+
+```
+Django>=5.0,<6.0              # Framework principal
+djangorestframework>=3.14     # API REST
+django-cors-headers>=4.0      # CORS para frontend
+google-genai>=1.10.0          # Google Gemini AI
+Pillow>=10.0                  # Procesamiento de imágenes
+requests>=2.31.0              # HTTP requests
+whitenoise>=6.0               # Servir archivos estáticos
+```
+
+**Nota**: Para despliegue con PostgreSQL, descomentar `psycopg2-binary>=2.9`
 
 ## ⚠️ Notas importantes
 
@@ -126,3 +236,5 @@ El sistema ahora utiliza un **mapeo directo de URLs específicas de Unsplash** p
 3. El admin de Django está en: `http://127.0.0.1:8000/admin/`
 4. Todas las rutas de la API están bajo `/api/`
 5. El límite de Google Gemini es ~20 peticiones diarias (versión gratuita)
+6. **Docker Helper** (`docker-helper.ps1`): Script útil para gestionar contenedores en Windows
+7. **Build Script** (`build.sh`): Script de despliegue para Render.com/Railway

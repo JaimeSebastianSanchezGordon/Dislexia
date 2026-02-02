@@ -1,0 +1,66 @@
+.ejemplos-container {
+    padding: 40px;
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.ejemplos-container h1 {
+    margin-bottom: 40px;
+    color: #333;
+    font-size: 2.5rem;
+}
+
+.botones-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.btn-demo {
+    padding: 15px 30px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: white;
+}
+
+.btn-demo:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.btn-error {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+}
+
+.btn-exito {
+    background: linear-gradient(135deg, #51cf66 0%, #37b24d 100%);
+}
+
+.btn-advertencia {
+    background: linear-gradient(135deg, #ffd43b 0%, #fab005 100%);
+    color: #333;
+}
+
+.btn-info {
+    background: linear-gradient(135deg, #4dabf7 0%, #339af0 100%);
+}
+
+.modal-contenido-personalizado {
+    text-align: left;
+}
+
+.modal-contenido-personalizado p {
+    margin: 10px 0;
+    font-size: 1rem;
+    color: #555;
+}
+
+.modal-contenido-personalizado strong {
+    color: #333;
+}

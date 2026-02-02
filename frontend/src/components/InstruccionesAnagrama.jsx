@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import '../App.css';
 import axios from "axios";
 import { API_ENDPOINTS } from '../config/api';
+import Modal from './Modal';
 
 function InstruccionesAnagrama({ alClickJugarAnagrama, alClickCasa, alClickRegresar, numImagenes = 3 }) {
     const [cargando, setCargando] = useState(false);
+    const [mostrarError, setMostrarError] = useState(false);
+    const [mensajeError, setMensajeError] = useState('');
 
     const iniciarJuegoAnagrama = async () => {
         setCargando(true);
@@ -13,8 +16,17 @@ function InstruccionesAnagrama({ alClickJugarAnagrama, alClickCasa, alClickRegre
             alClickJugarAnagrama(res.data);
         } catch (err) {
             console.error("Error al obtener datos:", err);
-            // Si falla, intentar de nuevo o mostrar error
-            alert("Error al cargar el juego. Intenta de nuevo.");
+
+            // Determinar mensaje de error específico
+            if (err.response) {
+                setMensajeError(`Error del servidor (${err.response.status}). Por favor, intenta de nuevo.`);
+            } else if (err.request) {
+                setMensajeError("No se pudo conectar con el servidor. Verifica tu conexión a internet.");
+            } else {
+                setMensajeError("Error al cargar el juego. Intenta de nuevo.");
+            }
+
+            setMostrarError(true);
         } finally {
             setCargando(false);
         }
@@ -58,6 +70,16 @@ function InstruccionesAnagrama({ alClickJugarAnagrama, alClickCasa, alClickRegre
                     )}
                 </button>
             </div>
+
+            {/* Modal de error */}
+            <Modal
+                mostrar={mostrarError}
+                onCerrar={() => setMostrarError(false)}
+                titulo="Error al cargar"
+                mensaje={mensajeError}
+                tipo="error"
+                textoBoton="OK"
+            />
         </div>
     );
 }

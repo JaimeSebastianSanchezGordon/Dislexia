@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import '../App.css';
 import axios from "axios";
 import { API_ENDPOINTS } from '../config/api';
+import Modal from './Modal';
 
 function InstruccionesSilabas({ alClickCasa, alClickRegresar, alClickJugarSilabas, numImagenes = 3 }) {
     const [cargando, setCargando] = useState(false);
+    const [mostrarError, setMostrarError] = useState(false);
+    const [mensajeError, setMensajeError] = useState('');
 
     const iniciarJuegoSilabas = async () => {
         setCargando(true);
@@ -13,7 +16,17 @@ function InstruccionesSilabas({ alClickCasa, alClickRegresar, alClickJugarSilaba
             alClickJugarSilabas(res.data);
         } catch (err) {
             console.error("Error al obtener datos:", err);
-            alert("Error al cargar el juego. Intenta de nuevo.");
+
+            // Determinar mensaje de error específico
+            if (err.response) {
+                setMensajeError(`Error del servidor (${err.response.status}). Por favor, intenta de nuevo.`);
+            } else if (err.request) {
+                setMensajeError("No se pudo conectar con el servidor. Verifica tu conexión a internet.");
+            } else {
+                setMensajeError("Error al cargar el juego. Intenta de nuevo.");
+            }
+
+            setMostrarError(true);
         } finally {
             setCargando(false);
         }
@@ -56,6 +69,16 @@ function InstruccionesSilabas({ alClickCasa, alClickRegresar, alClickJugarSilaba
                     )}
                 </button>
             </div>
+
+            {/* Modal de error */}
+            <Modal
+                mostrar={mostrarError}
+                onCerrar={() => setMostrarError(false)}
+                titulo="Error al cargar"
+                mensaje={mensajeError}
+                tipo="error"
+                textoBoton="OK"
+            />
         </div>
     );
 }

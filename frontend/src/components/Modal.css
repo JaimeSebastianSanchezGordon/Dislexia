@@ -1,0 +1,218 @@
+/* ========================================
+   MODAL - VENTANA FLOTANTE
+   ======================================== */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    animation: fadeIn 0.3s ease-in-out;
+    backdrop-filter: blur(4px);
+}
+
+.modal-contenido {
+    background: white;
+    border-radius: 20px;
+    padding: 0;
+    min-width: 300px;
+    max-width: 500px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    animation: slideDown 0.3s ease-out;
+    overflow: hidden;
+}
+
+/* Header del modal */
+.modal-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 25px 30px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.modal-icono {
+    font-size: 2.5rem;
+    line-height: 1;
+}
+
+.modal-titulo {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #333;
+}
+
+/* Body del modal */
+.modal-body {
+    padding: 30px;
+}
+
+.modal-mensaje {
+    margin: 0;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    color: #555;
+}
+
+/* Footer del modal */
+.modal-footer {
+    padding: 20px 30px;
+    background-color: #f8f8f8;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.modal-boton {
+    padding: 12px 30px;
+    font-size: 1rem;
+    font-weight: bold;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 100px;
+}
+
+/* Estilos según tipo de modal */
+
+/* ERROR */
+.modal-error .modal-header {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+    color: white;
+}
+
+.modal-error .modal-titulo {
+    color: white;
+}
+
+.modal-error .modal-boton {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+    color: white;
+}
+
+.modal-error .modal-boton:hover {
+    background: linear-gradient(135deg, #ff5252 0%, #e53935 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+}
+
+/* ÉXITO */
+.modal-exito .modal-header {
+    background: linear-gradient(135deg, #51cf66 0%, #37b24d 100%);
+    color: white;
+}
+
+.modal-exito .modal-titulo {
+    color: white;
+}
+
+.modal-exito .modal-boton {
+    background: linear-gradient(135deg, #51cf66 0%, #37b24d 100%);
+    color: white;
+}
+
+.modal-exito .modal-boton:hover {
+    background: linear-gradient(135deg, #40c057 0%, #2f9e44 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(81, 207, 102, 0.4);
+}
+
+/* ADVERTENCIA */
+.modal-advertencia .modal-header {
+    background: linear-gradient(135deg, #ffd43b 0%, #fab005 100%);
+    color: #333;
+}
+
+.modal-advertencia .modal-titulo {
+    color: #333;
+}
+
+.modal-advertencia .modal-boton {
+    background: linear-gradient(135deg, #ffd43b 0%, #fab005 100%);
+    color: #333;
+}
+
+.modal-advertencia .modal-boton:hover {
+    background: linear-gradient(135deg, #fcc419 0%, #f59f00 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 212, 59, 0.4);
+}
+
+/* INFO */
+.modal-info .modal-header {
+    background: linear-gradient(135deg, #4dabf7 0%, #339af0 100%);
+    color: white;
+}
+
+.modal-info .modal-titulo {
+    color: white;
+}
+
+.modal-info .modal-boton {
+    background: linear-gradient(135deg, #4dabf7 0%, #339af0 100%);
+    color: white;
+}
+
+.modal-info .modal-boton:hover {
+    background: linear-gradient(135deg, #3b9ded 0%, #228be6 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(77, 171, 247, 0.4);
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .modal-contenido {
+        margin: 20px;
+        min-width: auto;
+        max-width: 90%;
+    }
+
+    .modal-header {
+        padding: 20px;
+    }
+
+    .modal-body {
+        padding: 20px;
+    }
+
+    .modal-footer {
+        padding: 15px 20px;
+    }
+
+    .modal-titulo {
+        font-size: 1.3rem;
+    }
+
+    .modal-icono {
+        font-size: 2rem;
+    }
+}
