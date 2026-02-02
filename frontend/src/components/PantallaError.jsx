@@ -1,9 +1,19 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import '../App.css';
+import './PantallaError.css';
 
-function PantallaError({ alClickCasa, alContinuar, respuestaCorrecta, tipoJuego, intentos }) {
-    // Solo mostrar la respuesta correcta después del 3er intento
-    const mostrarRespuesta = intentos >= 3;
+function PantallaError({ alClickCasa, alContinuar, respuestaCorrecta, tipoJuego, intentos, maxIntentos = 3 }) {
+    const [mostrarContador, setMostrarContador] = useState(true);
+    const intentosRestantes = maxIntentos - intentos;
+
+    useEffect(() => {
+        // Mostrar el contador animado por un momento
+        const timer = setTimeout(() => {
+            setMostrarContador(false);
+        }, 1500);
+
+        return () => clearTimeout(timer);
+    }, []);
 
     return (
         <div id="error-screen" className="screen">
@@ -14,22 +24,32 @@ function PantallaError({ alClickCasa, alContinuar, respuestaCorrecta, tipoJuego,
                     <polyline points="9 22 9 12 15 12 15 22"></polyline>
                 </svg>
             </button>
+
             <div className="content-center">
-                <div className="error-icon">😕</div>
-                <h1 className="title">Fallaste</h1>
-                <div className="error-card">
-                    {mostrarRespuesta ? (
-                        <>
-                            <p className="error-text">No te preocupes, la forma correcta es:</p>
-                            <p className="correct-answer">{respuestaCorrecta}</p>
-                        </>
-                    ) : (
-                        <p className="error-text">¡Inténtalo de nuevo, tú puedes!</p>
-                    )}
-                </div>
-                <button className="btn-error game-card-btn" onClick={alContinuar}>
-                    {mostrarRespuesta ? 'Continuar' : 'Reintentar'}
-                </button>
+                {/* Contador animado de intentos */}
+                {mostrarContador && intentosRestantes > 0 && (
+                    <div className="contador-intentos-overlay">
+                        <div className="contador-circulo spin-animation">
+                            <div className="numero-intentos">{intentosRestantes}</div>
+                        </div>
+                        <p className="texto-intentos">
+                            {intentosRestantes === 1 ? '¡Último intento!' : `${intentosRestantes} intentos restantes`}
+                        </p>
+                    </div>
+                )}
+
+                {!mostrarContador && (
+                    <>
+                        <div className="error-icon">😕</div>
+                        <h1 className="title">Fallaste</h1>
+                        <div className="error-card">
+                            <p className="error-text">¡Inténtalo de nuevo, tú puedes!</p>
+                        </div>
+                        <button className="btn-error game-card-btn" onClick={alContinuar}>
+                            Reintentar
+                        </button>
+                    </>
+                )}
             </div>
         </div>
     );

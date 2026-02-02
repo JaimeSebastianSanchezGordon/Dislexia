@@ -2,11 +2,14 @@ import React, {useState, useEffect} from 'react';
 import '../App.css';
 import PantallaCorrecta from './PantallaCorrecta';
 import PantallaError from './PantallaError';
+import PantallaIntentosAgotados from './PantallaIntentosAgotados';
 
 function ModoSilabas({palabras, indice, alClickCasa, alClickOracion}) {
+    const MAX_INTENTOS = 3;
     const [silabaSeleccionada, setSilabaSeleccionada] = useState(null);
     const [mostrarExito, setMostrarExito] = useState(false);
     const [mostrarError, setMostrarError] = useState(false);
+    const [mostrarIntentosAgotados, setMostrarIntentosAgotados] = useState(false);
     const [intentos, setIntentos] = useState(0);
 
     useEffect(() => {
@@ -14,6 +17,7 @@ function ModoSilabas({palabras, indice, alClickCasa, alClickOracion}) {
         setSilabaSeleccionada(null);
         setMostrarExito(false);
         setMostrarError(false);
+        setMostrarIntentosAgotados(false);
         setIntentos(0);
     }, [indice]);
 
@@ -42,13 +46,18 @@ function ModoSilabas({palabras, indice, alClickCasa, alClickOracion}) {
     const continuarDespuesDeError = () => {
         setMostrarError(false);
 
-        // Si ya pasaron 3 intentos, ir a la oración
-        if (intentos >= 2) { // Cambiado a 2 para que sean 3 intentos en total
-            alClickOracion();
+        // Si ya alcanzó el máximo de intentos, mostrar respuesta correcta
+        if (intentos >= MAX_INTENTOS) {
+            setMostrarIntentosAgotados(true);
         } else {
             // Resetear la selección para reintentar
             setSilabaSeleccionada(null);
         }
+    };
+
+    const continuarDespuesDeIntentosAgotados = () => {
+        setMostrarIntentosAgotados(false);
+        alClickOracion();
     };
 
     const reproducirAudio = () => {
@@ -78,6 +87,16 @@ function ModoSilabas({palabras, indice, alClickCasa, alClickOracion}) {
     // La respuesta correcta para mostrar en caso de error
     const respuestaCorrecta = palabraActual.silabas[palabraActual.silaba_oculta];
 
+    // Mostrar pantalla de intentos agotados
+    if (mostrarIntentosAgotados) {
+        return (
+            <PantallaIntentosAgotados
+                palabraActual={palabraActual}
+                alContinuar={continuarDespuesDeIntentosAgotados}
+            />
+        );
+    }
+
     // Mostrar pantalla de éxito
     if (mostrarExito) {
         return <PantallaCorrecta alContinuar={continuarDespuesDeExito} />;
@@ -92,6 +111,7 @@ function ModoSilabas({palabras, indice, alClickCasa, alClickOracion}) {
                 respuestaCorrecta={respuestaCorrecta}
                 tipoJuego="silabas"
                 intentos={intentos}
+                maxIntentos={MAX_INTENTOS}
             />
         );
     }

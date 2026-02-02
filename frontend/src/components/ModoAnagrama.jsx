@@ -1,32 +1,36 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import '../App.css';
 import PantallaCorrecta from './PantallaCorrecta';
 import PantallaError from './PantallaError';
+import PantallaIntentosAgotados from './PantallaIntentosAgotados';
 
 function ModoAnagrama({palabras, indice, alClickCasa, alClickOracion}) {
+    const MAX_INTENTOS = 3;
     const [letrasDisponibles, setLetrasDisponibles] = useState([]);
     const [letrasSeleccionadas, setLetrasSeleccionadas] = useState([]);
     const [mostrarExito, setMostrarExito] = useState(false);
     const [mostrarError, setMostrarError] = useState(false);
+    const [mostrarIntentosAgotados, setMostrarIntentosAgotados] = useState(false);
     const [intentos, setIntentos] = useState(0);
 
-    useEffect(() => {
-        if (palabras && palabras[indice]) {
-            prepararRonda(palabras[indice]);
-        }
-    }, [palabras, indice]);
-
-    const prepararRonda = (palabraData) => {
+    const prepararRonda = useCallback((palabraData) => {
         if (!palabraData) return;
         setLetrasSeleccionadas([]);
         setMostrarExito(false);
         setMostrarError(false);
+        setMostrarIntentosAgotados(false);
         setIntentos(0);
         let letras = palabraData.palabra_dividida_letras
             .split('-')
             .sort(() => Math.random() - 0.5);
         setLetrasDisponibles(letras);
-    };
+    }, []);
+
+    useEffect(() => {
+        if (palabras && palabras[indice]) {
+            prepararRonda(palabras[indice]);
+        }
+    }, [palabras, indice, prepararRonda]);
 
     const seleccionarLetra = (letra, index) => {
         setLetrasSeleccionadas([...letrasSeleccionadas, letra]);
@@ -58,14 +62,22 @@ function ModoAnagrama({palabras, indice, alClickCasa, alClickOracion}) {
     const continuarDespuesDeError = () => {
         setMostrarError(false);
 
-        // Si ya pasaron 3 intentos, ir a la oración
-        if (intentos >= 3) {
-            alClickOracion();
+        // Si ya alcanzó el máximo de intentos, mostrar respuesta correcta
+        if (intentos >= MAX_INTENTOS) {
+            setMostrarIntentosAgotados(true);
         } else {
             // Resetear las letras para reintentar
             setLetrasSeleccionadas([]);
-            prepararRonda(palabras[indice]);
+            let letras = palabras[indice].palabra_dividida_letras
+                .split('-')
+                .sort(() => Math.random() - 0.5);
+            setLetrasDisponibles(letras);
         }
+    };
+
+    const continuarDespuesDeIntentosAgotados = () => {
+        setMostrarIntentosAgotados(false);
+        alClickOracion();
     };
 
     // Función auxiliar para activar letras con Enter o Espacio
@@ -95,10 +107,20 @@ function ModoAnagrama({palabras, indice, alClickCasa, alClickOracion}) {
 
         window.addEventListener('keydown', manejarEscrituraDirecta);
         return () => window.removeEventListener('keydown', manejarEscrituraDirecta);
-    }, [letrasDisponibles, letrasSeleccionadas, palabras, indice]);
+    }, [letrasDisponibles, letrasSeleccionadas, palabras, indice, comprobarRespuesta, quitarLetra, seleccionarLetra]);
 
     const palabraActual = palabras[indice];
     if (!palabraActual) return <div className="screen">Cargando juego...</div>;
+
+    // Mostrar pantalla de intentos agotados
+    if (mostrarIntentosAgotados) {
+        return (
+            <PantallaIntentosAgotados
+                palabraActual={palabraActual}
+                alContinuar={continuarDespuesDeIntentosAgotados}
+            />
+        );
+    }
 
     // Mostrar pantalla de éxito
     if (mostrarExito) {
@@ -114,6 +136,7 @@ function ModoAnagrama({palabras, indice, alClickCasa, alClickOracion}) {
                 respuestaCorrecta={palabraActual.nombre}
                 tipoJuego="anagrama"
                 intentos={intentos}
+                maxIntentos={MAX_INTENTOS}
             />
         );
     }

@@ -136,6 +136,44 @@ curl -X POST http://127.0.0.1:8000/api/oracion/ \
 **Backend**: Django 5+ • Django REST Framework • Google Gemini AI • SQLite  
 **Frontend**: React 18 • Vite 6 • Axios • Web Speech API
 
+## 🐛 Solución de Problemas Comunes
+
+### ❌ Error: "AxiosError" o "Error al obtener datos"
+
+**Causa:** El backend no está corriendo.
+
+**Solución:**
+```powershell
+# Opción 1: Usa el script de inicio
+.\iniciar.ps1
+
+# Opción 2: Manual
+.\.venv\Scripts\Activate.ps1
+python manage.py runserver
+```
+
+**Ver guía completa:** `ERROR_BACKEND_NO_CORRIENDO.md`
+
+### ❌ Error: "Module not found" (Backend)
+
+```powershell
+pip install -r requirements.txt
+```
+
+### ❌ Error: "Module not found" (Frontend)
+
+```powershell
+cd frontend
+npm install
+```
+
+### ❌ Backend funciona pero frontend no conecta
+
+Verifica que:
+1. Backend esté en: `http://127.0.0.1:8000`
+2. Frontend esté en: `http://localhost:5173`
+3. Ambos servidores estén corriendo simultáneamente
+
 ## 📚 Documentación Detallada
 
 - **[backend.md](./backend.md)** - Configuración completa del backend, endpoints, deployment, Docker, y más
